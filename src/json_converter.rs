@@ -98,7 +98,7 @@ impl From<serde_json::Error> for JsonConverterError {
 /// let (inputs, outputs) = json_converter::training_data_from_json(json)?;
 /// let mut model = WithoutFeatureScaling::new(inputs, outputs, vec![0.0; 3]);
 /// ```
-pub fn manipule_from_json(
+pub fn manipulate_from_json(
     json : &str
 ) -> Result<(Vec<Vec<f64>>, Vec<f64>, Vec<f64>), JsonConverterError> {
     let data : TrainingData = serde_json::from_str(json)?;

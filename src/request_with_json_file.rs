@@ -22,7 +22,7 @@ pub async fn convert_to_json_string(
     ))?;
 
     let (inputs, outputs, initial_coefficients)
-        = json_converter::manipule_from_json(&json_data)
+        = json_converter::manipulate_from_json(&json_data)
         .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
 
     let (result_inputs, result_outputs, ratios)
