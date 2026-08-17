@@ -11,6 +11,18 @@ caller can map the resulting coefficients back to the original units.
 
 Built with [axum](https://github.com/tokio-rs/axum) on tokio.
 
+## Its caller
+
+`learn_model_with_linear_regression_api` calls this service on every `POST /train`
+and trains on what comes back — the hop is what lets its learning rate be `0.01`
+instead of `0.000003`. It maps the coefficients back into the caller's units
+afterwards, using the `ratios` returned here.
+
+Nothing else is meant to reach this service. It binds `127.0.0.1:3001` by default,
+and under that project's `docker-compose.yml` it sits on an internal network with no
+published port at all, so there is no address a browser could use. It needs no CORS
+configuration for the same reason: no browser ever talks to it directly.
+
 ## API
 
 ### `POST /manipulate-datas`
@@ -49,15 +61,31 @@ JSON payload as text. The request body is capped at 32 MiB.
 `outputs` in the last slot. A value `r` means the column was divided by `10^r`.
 `initial_coefficients` is echoed back unchanged.
 
-**Scaling rule.** For a value `v`, the exponent is `len(digits before the
-decimal point of |v|) - 1`, and the scaled value is `v * 10^-r`. So `116.6`
-becomes `1.166` with exponent `2`, while `5.0` is left alone with exponent `0`.
+**Scaling rule.** One exponent is chosen per column, from the largest magnitude
+in it: `r = len(digits before the decimal point of max|v|) - 1`. Every value in
+that column is then scaled to `v * 10^-r`. A column whose largest value is
+already below 10 keeps `r = 0` and is left alone, rather than being scaled up.
 
-> **Note:** the exponent is computed and applied per value, but only the first
-> sample's exponents end up in `ratios`. If a later sample has a different
-> magnitude in some column, that column is scaled inconsistently and `ratios`
-> will not describe it. Keep magnitudes uniform within a column, or treat
-> `ratios` as descriptive of row 0 only.
+So in the example above the first feature column, holding `116.6` and `655.0`,
+is divided by `10^2` throughout, while the column of `5.0` and `1.0` is
+untouched.
+
+Because a single exponent covers a whole column, the transform is a plain linear
+rescaling. That is what makes `ratios` enough to map a model's coefficients back
+to the original units:
+
+```text
+a_j = a'_j * 10^(r_y - r_j)      b = b' * 10^r_y
+```
+
+where `a'` and `b'` are the coefficients trained on the scaled data, `r_j` is
+that feature's exponent and `r_y` is the last entry of `ratios`, the one for
+`outputs`.
+
+> **Note:** the exponent comes from the column's largest magnitude, so a column
+> mixing wildly different scales still lands unevenly — `[1.0, 900000.0]` scales
+> to `[0.00001, 9.0]`. The relationship is preserved and the mapping back is
+> exact; it is only the conditioning that a single power of ten cannot fix.
 
 **Errors** — all returned as plain text:
 
