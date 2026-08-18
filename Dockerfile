@@ -24,9 +24,7 @@ COPY --from=builder /app/target/release/data_manipulate_api /usr/local/bin/data_
 
 USER app
 
-# The binary defaults to 127.0.0.1, which no other container or the host can
-# reach. Override at run time to change the port.
-ENV BIND_ADDR=0.0.0.0:3001
+ENV BIND_ADDR=127.0.0.1:3001
 EXPOSE 3001
 
 ENTRYPOINT ["/usr/local/bin/data_manipulate_api"]
