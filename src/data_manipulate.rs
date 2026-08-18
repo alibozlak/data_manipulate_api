@@ -39,5 +39,5 @@ fn find_column_ratio(data : f64) -> (f64, usize) {
     }
     if data_s_string.len() > 1 { ratio = data_s_string.len() - 1; }
 
-    (data * 10.0_f64.powi(-(ratio as i32)), ratio)
+    (convert_data(data, ratio), ratio)
 }
