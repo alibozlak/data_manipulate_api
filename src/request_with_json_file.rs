@@ -21,14 +21,14 @@ pub async fn convert_to_json_string(
         "Form hasn't a 'dataset' named field !!".to_string(),
     ))?;
 
-    let (inputs, outputs, initial_coefficients)
+    let (inputs, outputs)
         = json_converter::manipulate_from_json(&json_data)
         .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
 
     let (result_inputs, result_outputs, ratios)
         = data_manipulate::manipulate_datas_between_0_and_10(inputs, outputs);
 
-    json_data = json_converter::coefficients_to_json(ratios, result_inputs, result_outputs, initial_coefficients)
+    json_data = json_converter::coefficients_to_json(ratios, result_inputs, result_outputs)
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
 
     Ok(json_data)
