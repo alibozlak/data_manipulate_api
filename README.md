@@ -96,8 +96,10 @@ nothing, or publish to loopback on the host side.
 docker run --rm -e BIND_ADDR=0.0.0.0:8080 -p 127.0.0.1:8080:8080 data_manipulate_api
 ```
 
-`learn_model_with_linear_regression_api`'s `docker-compose.yml` runs this service
-with no `ports:` entry at all, so only the other service on that network reaches it.
+The compose stack that runs the chain — kept outside these repositories, pulling its
+images from Docker Hub — gives this service no `ports:` entry at all, so the only
+thing that reaches it is `learn_model_with_linear_regression_api` on the same private
+network.
 
 ## Running locally
 
