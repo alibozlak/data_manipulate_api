@@ -1,7 +1,7 @@
 # data_manipulate_api
 
-An HTTP service that rescales a training data set so every value falls into a
-single-digit range, and reports the power of ten each column was divided by.
+An HTTP service that divides each column of a training data set by a power of
+ten, and reports the exponent it used.
 
 Feeding a regression model raw features that span wildly different magnitudes
 (a price in the tens of thousands next to a room count in the single digits)
@@ -45,15 +45,40 @@ JSON payload as text. The request body is capped at 32 MiB.
 `ratios` holds `n + 1` exponents — one per feature column, with the exponent for
 `outputs` in the last slot. A value `r` means the column was divided by `10^r`.
 
-**Scaling rule.** For a value `v`, the exponent is `len(digits before the
-decimal point of |v|) - 1`, and the scaled value is `v * 10^-r`. So `116.6`
-becomes `1.166` with exponent `2`, while `5.0` is left alone with exponent `0`.
+**Scaling rule.** A column's exponent is taken from its **first sample**:
+`r = len(digits before the decimal point of |v0|) - 1`, where `v0` is that
+column's value in `inputs[0]`. Every value in the column is then scaled to
+`v * 10^-r`, the first one included. `outputs` gets its own exponent the same
+way, from `outputs[0]`, and that one occupies the last slot of `ratios`.
 
-> **Note:** the exponent is computed and applied per value, but only the first
-> sample's exponents end up in `ratios`. If a later sample has a different
-> magnitude in some column, that column is scaled inconsistently and `ratios`
-> will not describe it. Keep magnitudes uniform within a column, or treat
-> `ratios` as descriptive of row 0 only.
+So in the example above the first feature column takes `r = 2` from `116.6`, and
+`655.0` is divided by that same `10^2` to land on `6.55`. A column whose first
+value is already below 10 keeps `r = 0` and is left alone.
+
+Because one exponent covers a whole column, the transform is a plain linear
+rescaling. That is what makes `ratios` enough to map a model's coefficients back
+to the original units:
+
+```text
+a_j = a'_j * 10^(r_y - r_j)      b = b' * 10^r_y
+```
+
+where `a'` and `b'` are the coefficients trained on the scaled data, `r_j` is
+that feature's exponent, and `r_y` is the last entry of `ratios`.
+
+> **Note:** the exponent comes from the first sample rather than from the
+> column's largest value, so anything bigger than the first sample is not
+> brought under 10. A column of `[55.0, 165.0]` takes `r = 1` from `55.0` and
+> comes back as `[5.5, 16.5]`. The scaling is still uniform across the column
+> and the mapping back is still exact — it is only the "single digit" part that
+> the first row cannot promise on behalf of the rest.
+>
+> It cuts the other way too. A first sample smaller than the rest leaves the
+> column barely scaled: `[5.0, 900000.0]` takes `r = 0` and passes through
+> untouched, while `[900000.0, 5.0]` — the same two values, reordered — takes
+> `r = 5` and becomes `[9.0, 0.00005]`. Ordering the data so the first sample
+> carries each column's largest magnitude gets the most conditioning out of this
+> service, and keeps the scaled values inside a single digit.
 
 **Errors** — all returned as plain text:
 
