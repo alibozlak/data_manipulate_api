@@ -90,9 +90,9 @@ so editing `src/` does not trigger a full rebuild of the dependency tree.
 
 ### Configuration
 
-| Variable | Default | Notes |
-| --- | --- | --- |
-| `BIND_ADDR` | `127.0.0.1:3001` | The image overrides this to `0.0.0.0:3001`; a container bound to loopback is unreachable from the host. |
+| Variable | Default |
+| --- | --- | 
+| `BIND_ADDR` | `127.0.0.1:3001` |
 
 To serve on a different port, change both the bind address and the mapping:
 
