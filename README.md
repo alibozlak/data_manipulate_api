@@ -23,8 +23,7 @@ JSON payload as text. The request body is capped at 32 MiB.
 ```json
 {
   "inputs": [[116.6, 5.0, 13.0, 3.0], [655.0, 1.0, 22.0, 2.5]],
-  "outputs": [2300000.0, 1750000.0],
-  "initial_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0]
+  "outputs": [2300000.0, 1750000.0]
 }
 ```
 
@@ -32,7 +31,6 @@ JSON payload as text. The request body is capped at 32 MiB.
 | --- | --- | --- |
 | `inputs` | `[[float]]` | One entry per sample, each holding that sample's `n` feature values. |
 | `outputs` | `[float]` | The expected output of the sample at the same index in `inputs`. |
-| `initial_coefficients` | `[float]` | Starting coefficients: one per feature plus the bias, so `n + 1` values. |
 
 **Response payload**
 
@@ -40,14 +38,12 @@ JSON payload as text. The request body is capped at 32 MiB.
 {
   "ratios": [2, 0, 1, 0, 6],
   "inputs": [[1.166, 5.0, 1.3, 3.0], [6.55, 1.0, 2.2, 2.5]],
-  "outputs": [2.3, 1.75],
-  "initial_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0]
+  "outputs": [2.3, 1.75]
 }
 ```
 
 `ratios` holds `n + 1` exponents — one per feature column, with the exponent for
 `outputs` in the last slot. A value `r` means the column was divided by `10^r`.
-`initial_coefficients` is echoed back unchanged.
 
 **Scaling rule.** For a value `v`, the exponent is `len(digits before the
 decimal point of |v|) - 1`, and the scaled value is `v * 10^-r`. So `116.6`
@@ -68,7 +64,6 @@ becomes `1.166` with exponent `2`, while `5.0` is left alone with exponent `0`.
 | `400` | `inputs` is empty. |
 | `400` | `inputs` and `outputs` have different lengths. |
 | `400` | Samples in `inputs` do not all have the same feature count. |
-| `400` | `len(initial_coefficients) != n + 1`. |
 | `500` | The result could not be serialised back to JSON. |
 
 ## Running with Docker
@@ -90,15 +85,19 @@ so editing `src/` does not trigger a full rebuild of the dependency tree.
 
 ### Configuration
 
-| Variable | Default |
-| --- | --- | 
-| `BIND_ADDR` | `127.0.0.1:3001` |
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `BIND_ADDR` | `127.0.0.1:3001` | The image overrides this to `0.0.0.0:3001`. A container bound to loopback is unreachable from its own host and from every other container, publishing a port does not change that. |
 
-To serve on a different port, change both the bind address and the mapping:
+Keeping the service private is the network's job, not the bind address's: publish
+nothing, or publish to loopback on the host side.
 
 ```bash
-docker run --rm -e BIND_ADDR=0.0.0.0:8080 -p 8080:8080 data_manipulate_api
+docker run --rm -e BIND_ADDR=0.0.0.0:8080 -p 127.0.0.1:8080:8080 data_manipulate_api
 ```
+
+`learn_model_with_linear_regression_api`'s `docker-compose.yml` runs this service
+with no `ports:` entry at all, so only the other service on that network reaches it.
 
 ## Running locally
 
@@ -121,7 +120,7 @@ curl -X POST http://localhost:3001/manipulate-datas -F "dataset=@dataset.json"
 Or inline:
 
 ```bash
-curl -X POST http://localhost:3001/manipulate-datas -F 'dataset={"inputs":[[116.6,5.0]],"outputs":[2300000.0],"initial_coefficients":[0.0,0.0,0.0]}'
+curl -X POST http://localhost:3001/manipulate-datas -F 'dataset={"inputs":[[116.6,5.0]],"outputs":[2300000.0]}'
 ```
 
 ## Project layout

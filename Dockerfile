@@ -24,7 +24,11 @@ COPY --from=builder /app/target/release/data_manipulate_api /usr/local/bin/data_
 
 USER app
 
-ENV BIND_ADDR=127.0.0.1:3001
+# Loopback inside a container shuts out the host and every other container
+# alike, so the image has to listen on all interfaces. Nothing is exposed by
+# that on its own: under compose this service publishes no port at all, so the
+# only thing that can reach it is another service on the same private network.
+ENV BIND_ADDR=0.0.0.0:3001
 EXPOSE 3001
 
 ENTRYPOINT ["/usr/local/bin/data_manipulate_api"]
